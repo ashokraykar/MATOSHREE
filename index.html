@@ -617,12 +617,13 @@ button,a,input,select{ -webkit-tap-highlight-color:transparent}
     var start=new Date(el.vDate.value+'T'+el.vStart.value+':00+05:30');
     var end=new Date(el.vDate.value+'T'+el.vEnd.value+':00+05:30');
     if(end<=start) end.setDate(end.getDate()+1);
+    if(start<=new Date()){err.textContent='प्रवासाची सुरुवात भविष्यातील तारीख आणि वेळेत निवडा.';err.hidden=false;return}
     var payload={
       vehicle_id:vehicleIds[veh],
-      name:el.vName.value.trim(),
+      customer_name:el.vName.value.trim(),
       phone:el.vPhone.value.trim(),
-      passengers:Number(el.vPax.value),
-      pickup:el.vFrom.value.trim(),
+      passenger_count:Number(el.vPax.value),
+      pickup_location:el.vFrom.value.trim(),
       destination:el.vTo.value.trim(),
       start_at:start.toISOString(),
       end_at:end.toISOString()
