@@ -18,14 +18,37 @@
 <button class="active" data-market-tab="owners">Owners</button>
 <button data-market-tab="drivers">Drivers</button>
 <button data-market-tab="marketVehicles">Marketplace Vehicles</button>
+<button data-market-tab="requests">Booking Requests</button>
 </div>
 <div id="marketMsg" class="notice hidden"></div>
 <section id="ownersPanel"><h2>Owner Registrations</h2><div class="tablewrap"><table><thead><tr><th>नाव</th><th>Email</th><th>Mobile</th><th>Address</th><th>Status</th><th>Action</th></tr></thead><tbody id="ownerRows"></tbody></table></div></section>
 <section id="driversPanel" class="hidden"><h2>Driver Registrations</h2><div class="tablewrap"><table><thead><tr><th>नाव</th><th>Email</th><th>Mobile</th><th>Licence</th><th>Status</th><th>Action</th></tr></thead><tbody id="driverRows"></tbody></table></div></section>
 <section id="marketVehiclesPanel" class="hidden"><h2>Marketplace Vehicle Registrations</h2><div class="tablewrap"><table><thead><tr><th>वाहन</th><th>नंबर</th><th>Capacity</th><th>Rate/km</th><th>Owner ID</th><th>Status</th><th>Available</th><th>Action</th></tr></thead><tbody id="marketVehicleRows"></tbody></table></div></section>
-</section></section></main>
+<section id="requestsPanel" class="hidden">
+  <h2>Marketplace Booking Requests</h2>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ग्राहक</th>
+          <th>मोबाईल</th>
+          <th>Pickup</th>
+          <th>Destination</th>
+          <th>गाडी</th>
+          <th>प्रवास तारीख</th>
+          <th>वेळ</th>
+          <th>Fare</th>
+          <th>Toll</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="requestRows"></tbody>
+    </table>
+  </div>
+</section></section></section></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
-(function(){'use strict';const URL='https://ywbgpyrevwdiymymtlxy.supabase.co';const KEY='sb_publishable_i5e8pBYCYMEbHGTpL8gRXA_mSv-dCBR';const db=window.supabase.createClient(URL,KEY);const $=id=>document.getElementById(id);let bookings=[],vehicles=[],blocks=[],marketOwners=[],marketDrivers=[],marketVehicles=[];
+(function(){'use strict';const URL='https://ywbgpyrevwdiymymtlxy.supabase.co';const KEY='sb_publishable_i5e8pBYCYMEbHGTpL8gRXA_mSv-dCBR';const db=window.supabase.createClient(URL,KEY);const $=id=>document.getElementById(id);let bookings=[],vehicles=[],blocks=[],marketOwners=[],marketDrivers=[],marketVehicles=[],marketRequests=[];
 function msg(id,t,c){const e=$(id);e.textContent=t;e.className='notice '+(c||'');}function clear(id){$(id).classList.add('hidden')}function fmt(v){return v?new Date(v).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'—'}function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function vname(id){return vehicles.find(v=>v.id===id)?.name||'Unknown vehicle'}
 async function load(){clear('appMsg');const [b,v,bl]=await Promise.all([db.from('bookings').select('id,customer_name,phone,pickup_location,destination,vehicle_id,passenger_count,start_at,end_at,status').order('start_at',{ascending:false}),db.from('vehicles').select('id,name,capacity,is_active').order('name'),db.from('vehicle_blocks').select('id,vehicle_id,start_at,end_at,reason').order('start_at',{ascending:false})]);if(b.error||v.error||bl.error){msg('appMsg','डेटा लोड झाला नाही: '+(b.error?.message||v.error?.message||bl.error?.message)+' — RLS policies तपासा.','error');return}bookings=b.data||[];vehicles=v.data||[];blocks=bl.data||[];$('totalCount').textContent=bookings.length;$('pendingCount').textContent=bookings.filter(x=>x.status==='pending').length;$('confirmedCount').textContent=bookings.filter(x=>x.status==='confirmed').length;$('cancelledCount').textContent=bookings.filter(x=>x.status==='cancelled').length;renderB();renderV();renderBl();await loadMarketplace()}
 
@@ -46,6 +69,29 @@ async function loadMarketplace(){
   if(err){msg('marketMsg','Marketplace डेटा लोड झाला नाही: '+err.message,'error');return}
   marketOwners=o.data||[];marketDrivers=d.data||[];marketVehicles=m.data||[];
   renderMarketplace();
+  await loadMarketplaceRequests();
+}
+async function loadMarketplaceRequests(){
+  const {data,error}=await db.from('marketplace_booking_requests').select('id,vehicle_id,customer_name,customer_mobile,pickup_location,destination,estimated_fare,estimated_toll,actual_toll,extra_toll_paid_directly,status,created_at,trip_date,trip_time').order('created_at',{ascending:false});
+  if(error){msg('marketMsg','Booking Requests लोड झाले नाहीत: '+error.message,'error');return}
+  marketRequests=data||[];
+  renderMarketplaceRequests();
+}
+function renderMarketplaceRequests(){
+  const rows=$('requestRows');
+  if(!rows)return;
+  rows.innerHTML=marketRequests.length?marketRequests.map(r=>{
+    const vehicle=marketVehicles.find(v=>v.id===r.vehicle_id);
+    const status=String(r.status||'pending').toLowerCase();
+    const actions=status==='pending'?`<button class="good" data-request-action="confirmed" data-id="${r.id}">Confirm</button><button class="danger" data-request-action="cancelled" data-id="${r.id}">Reject</button>`:'—';
+    return `<tr><td><b>${esc(r.customer_name)}</b></td><td><a href="tel:${esc(r.customer_mobile)}">${esc(r.customer_mobile)}</a></td><td>${esc(r.pickup_location)}</td><td>${esc(r.destination)}</td><td>${esc(vehicle?.vehicle_name||'Vehicle')}</td><td>${esc(r.trip_date||'—')}</td><td>${esc(String(r.trip_time||'—').slice(0,5))}</td><td>₹${esc(r.estimated_fare??0)}</td><td>₹${esc(r.estimated_toll??0)}</td><td><span class="status ${status==='confirmed'?'confirmed':status==='cancelled'?'cancelled':'pending'}">${esc(r.status||'pending')}</span></td><td><div class="actions">${actions}</div></td></tr>`;
+  }).join(''):'<tr><td colspan="11">सध्या Marketplace Booking Request उपलब्ध नाही.</td></tr>';
+}
+async function updateMarketplaceRequest(id,next){
+  const {error}=await db.from('marketplace_booking_requests').update({status:next}).eq('id',id);
+  if(error){msg('marketMsg','Booking Request Status बदलता आला नाही: '+error.message,'error');return}
+  msg('marketMsg',next==='confirmed'?'Booking Request Confirm केली.':'Booking Request Reject केली.','success');
+  await loadMarketplaceRequests();
 }
 function statusPill(s){return `<span class="status ${s==='approved'?'confirmed':s==='rejected'?'cancelled':'pending'}">${esc(s||'pending')}</span>`}
 function approvalActions(type,id,status){
@@ -68,6 +114,12 @@ async function updateMarketplaceStatus(type,id,next){
   await loadMarketplace();
 }
 document.addEventListener('click',async e=>{
+  let requestAction=e.target.closest('[data-request-action]');
+  if(requestAction){
+    const next=requestAction.dataset.requestAction;
+    if(!confirm(next==='confirmed'?'ही Booking Request Confirm करायची आहे का?':'ही Booking Request Reject करायची आहे का?'))return;
+    requestAction.disabled=true;await updateMarketplaceRequest(requestAction.dataset.id,next);return;
+  }
   let a=e.target.closest('[data-market-action]');
   if(a){
     const type=a.dataset.marketAction, next=a.dataset.next;
@@ -86,7 +138,8 @@ document.addEventListener('click',async e=>{
 });
 document.querySelectorAll('[data-market-tab]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('[data-market-tab]').forEach(x=>x.classList.toggle('active',x===b));
-  ['owners','drivers','marketVehicles'].forEach(t=>$(t+'Panel').classList.toggle('hidden',t!==b.dataset.marketTab));
+  ['owners','drivers','marketVehicles','requests'].forEach(t=>$(t+'Panel').classList.toggle('hidden',t!==b.dataset.marketTab));
+  if(b.dataset.marketTab==='requests')loadMarketplaceRequests();
 }));
 
 async function authorizeAdmin(u){
