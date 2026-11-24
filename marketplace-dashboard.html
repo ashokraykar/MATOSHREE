@@ -1,0 +1,274 @@
+
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MATOSHREE Owner Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f7f1e8;color:#57202d;font-family:Arial,sans-serif}
+.wrap{max-width:850px;margin:25px auto;padding:16px}
+.card{background:white;padding:22px;border-radius:16px;margin-bottom:18px;box-shadow:0 5px 20px #0001}
+h1,h2{text-align:center}
+h1{font-size:24px}
+label{display:block;font-weight:bold;margin:13px 0 6px}
+input{width:100%;padding:12px;border:1px solid #d8c8c4;border-radius:8px;font-size:16px}
+button{border:0;border-radius:8px;padding:12px 18px;background:#682033;color:white;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5}
+.full{width:100%;margin-top:16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.hidden{display:none}
+#msg{margin-top:14px;text-align:center;line-height:1.5}
+.vehicle{border:1px solid #eadbd7;border-radius:10px;padding:14px;margin:12px 0}
+.status{font-weight:bold;color:#a36a00}
+small{color:#777}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="card">
+<h1>MATOSHREE TOURS & TRAVELS</h1>
+<p style="text-align:center">वाहनमालक Dashboard</p>
+</div>
+
+<div class="card" id="loginBox">
+<h2>Owner Login</h2>
+<form id="loginForm">
+<label>ई-मेल</label>
+<input id="loginEmail" type="email" required autocomplete="email">
+<label>पासवर्ड</label>
+<input id="loginPassword" type="password" required autocomplete="current-password">
+<button class="full" type="submit" id="loginBtn">Login करा</button>
+</form>
+<div id="loginMsg"></div>
+</div>
+
+<div id="dashboard" class="hidden">
+
+<div class="card">
+<div class="top">
+<h2>माझे खाते</h2>
+<button type="button" id="logoutBtn">Logout</button>
+</div>
+<p id="ownerName"></p>
+<p id="ownerMobile"></p>
+<p id="ownerStatus" class="status"></p>
+</div>
+
+<div class="card">
+<h2>नवीन वाहन Add करा</h2>
+<form id="vehicleForm">
+
+<label>वाहनाचे नाव *</label>
+<input id="vehicleName" placeholder="उदा. Swift Dzire" required>
+
+<label>वाहन क्रमांक *</label>
+<input id="vehicleNumber" placeholder="उदा. MH12AB1234"
+maxlength="15" required>
+
+<label>प्रवासी क्षमता *</label>
+<input id="capacity" type="number" min="1" max="100" required>
+
+<label>प्रति किलोमीटर दर (₹) *</label>
+<input id="rate" type="number" min="0" step="0.01" required>
+
+<button class="full" type="submit" id="addBtn">वाहन नोंदणी करा</button>
+</form>
+<div id="vehicleMsg"></div>
+<p><small>नोंदणी केल्यानंतर वाहन Admin मंजुरीसाठी Pending राहील. मंजुरी मिळेपर्यंत ते ग्राहकांना दिसणार नाही.</small></p>
+</div>
+
+<div class="card">
+<h2>माझी वाहने</h2>
+<div id="vehicleList">वाहनांची माहिती लोड होत आहे...</div>
+</div>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL="https://ywbgpyrevwdiymymtlxy.supabase.co";
+const SUPABASE_KEY="sb_publishable_i5e8pBYCYMEbHGTpL8gRXA_mSv-dCBR";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const $=id=>document.getElementById(id);
+let currentUser=null;
+let ownerProfile=null;
+
+function message(id,text){
+  $(id).textContent=text;
+}
+
+async function loadDashboard(){
+  const {data:{user},error}=await db.auth.getUser();
+  if(error||!user){
+    currentUser=null;
+    $("loginBox").classList.remove("hidden");
+    $("dashboard").classList.add("hidden");
+    return;
+  }
+
+  currentUser=user;
+
+  const {data:owner,error:ownerError}=await db
+    .from("marketplace_owners")
+    .select("id,full_name,email,mobile,approval_status")
+    .eq("id",user.id)
+    .maybeSingle();
+
+  if(ownerError) throw ownerError;
+
+  if(!owner){
+    throw new Error("वाहनमालक Profile सापडली नाही.");
+  }
+
+  ownerProfile=owner;
+
+  if(owner.approval_status!=="approved"){
+    $("loginBox").classList.add("hidden");
+    $("dashboard").classList.remove("hidden");
+    $("ownerName").textContent="नाव: "+owner.full_name;
+    $("ownerMobile").textContent="मोबाईल: "+owner.mobile;
+    $("ownerStatus").textContent="खाते मंजुरी: "+owner.approval_status;
+    $("vehicleForm").classList.add("hidden");
+    $("vehicleList").textContent="Admin मंजुरी मिळाल्यानंतर वाहन नोंदणी करता येईल.";
+    return;
+  }
+
+  $("loginBox").classList.add("hidden");
+  $("dashboard").classList.remove("hidden");
+  $("vehicleForm").classList.remove("hidden");
+
+  $("ownerName").textContent="नाव: "+owner.full_name;
+  $("ownerMobile").textContent="मोबाईल: "+owner.mobile;
+  $("ownerStatus").textContent="खाते मंजूर झाले आहे.";
+
+  await loadVehicles();
+}
+
+async function loadVehicles(){
+  const {data,error}=await db
+    .from("marketplace_vehicles")
+    .select("id,vehicle_name,vehicle_number,passenger_capacity,rate_per_km,approval_status,is_available")
+    .eq("owner_id",currentUser.id)
+    .order("created_at",{ascending:false});
+
+  if(error) throw error;
+
+  const list=$("vehicleList");
+  list.replaceChildren();
+
+  if(!data.length){
+    list.textContent="अजून कोणतेही वाहन नोंदवलेले नाही.";
+    return;
+  }
+
+  data.forEach(v=>{
+    const box=document.createElement("div");
+    box.className="vehicle";
+
+    const title=document.createElement("strong");
+    title.textContent=v.vehicle_name+" — "+v.vehicle_number;
+
+    const details=document.createElement("p");
+    details.textContent="प्रवासी क्षमता: "+v.passenger_capacity+
+      " | दर: ₹"+v.rate_per_km+"/किमी";
+
+    const status=document.createElement("p");
+    status.className="status";
+    status.textContent="मंजुरी: "+v.approval_status+
+      " | उपलब्ध: "+(v.is_available?"होय":"नाही");
+
+    box.append(title,details,status);
+    list.appendChild(box);
+  });
+}
+
+$("loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  $("loginBtn").disabled=true;
+  message("loginMsg","Login सुरू आहे...");
+
+  try{
+    const {error}=await db.auth.signInWithPassword({
+      email:$("loginEmail").value.trim().toLowerCase(),
+      password:$("loginPassword").value
+    });
+
+    if(error) throw error;
+
+    message("loginMsg","");
+    await loadDashboard();
+  }catch(err){
+    message("loginMsg","त्रुटी: "+err.message);
+  }finally{
+    $("loginBtn").disabled=false;
+  }
+});
+
+$("vehicleForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+
+  if(!currentUser||!ownerProfile||
+     ownerProfile.approval_status!=="approved"){
+    message("vehicleMsg","वाहन नोंदणीसाठी Admin मंजुरी आवश्यक आहे.");
+    return;
+  }
+
+  $("addBtn").disabled=true;
+  message("vehicleMsg","वाहन नोंदणी सुरू आहे...");
+
+  try{
+    const vehicle={
+      owner_id:currentUser.id,
+      vehicle_name:$("vehicleName").value.trim(),
+      vehicle_number:$("vehicleNumber").value.trim().toUpperCase(),
+      passenger_capacity:Number($("capacity").value),
+      rate_per_km:Number($("rate").value),
+      approval_status:"pending",
+      is_available:false
+    };
+
+    const {error}=await db
+      .from("marketplace_vehicles")
+      .insert(vehicle);
+
+    if(error) throw error;
+
+    message("vehicleMsg","वाहन नोंदणी यशस्वी! Admin मंजुरी Pending आहे.");
+    $("vehicleForm").reset();
+    await loadVehicles();
+
+  }catch(err){
+    message("vehicleMsg","त्रुटी: "+err.message);
+  }finally{
+    $("addBtn").disabled=false;
+  }
+});
+
+$("logoutBtn").addEventListener("click",async()=>{
+  const {error}=await db.auth.signOut();
+  if(error){
+    message("vehicleMsg","Logout त्रुटी: "+error.message);
+    return;
+  }
+  location.reload();
+});
+
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==="SIGNED_OUT"){
+    currentUser=null;
+    $("dashboard").classList.add("hidden");
+    $("loginBox").classList.remove("hidden");
+  }
+});
+
+loadDashboard().catch(err=>{
+  message("loginMsg","त्रुटी: "+err.message);
+});
+</script>
+</body>
+</html>
