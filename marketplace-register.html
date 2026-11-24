@@ -1,0 +1,158 @@
+
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MATOSHREE Marketplace Registration</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f7f1e8;color:#57202d;font-family:Arial,sans-serif}
+.wrap{max-width:520px;margin:35px auto;padding:24px}
+.card{background:white;padding:25px;border-radius:18px;box-shadow:0 5px 25px #0001}
+h1{text-align:center;font-size:25px}
+p{text-align:center;color:#76545a}
+.tabs{display:flex;gap:10px;margin:22px 0}
+button{cursor:pointer;border:0;border-radius:9px;padding:13px;font-weight:bold}
+.tabs button{flex:1;background:#eee;color:#57202d}
+.tabs button.active,.submit{background:#682033;color:white}
+label{display:block;margin:14px 0 6px;font-weight:bold}
+input{width:100%;padding:13px;border:1px solid #d8c8c4;border-radius:8px;font-size:16px}
+.submit{width:100%;margin-top:20px;font-size:16px}
+.submit:disabled{opacity:.6;cursor:not-allowed}
+#msg{margin-top:16px;text-align:center;line-height:1.5}
+.small{font-size:13px;color:#777}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<h1>MATOSHREE TOURS & TRAVELS</h1>
+<p>Marketplace Partner Registration</p>
+
+<div class="tabs">
+<button type="button" id="ownerTab" class="active">वाहनमालक</button>
+<button type="button" id="driverTab">ड्रायव्हर</button>
+</div>
+
+<form id="regForm">
+<label>पूर्ण नाव *</label>
+<input id="name" required autocomplete="name">
+
+<label>मोबाईल नंबर *</label>
+<input id="mobile" type="tel" pattern="[0-9]{10}" maxlength="10" required autocomplete="tel">
+
+<label>ई-मेल *</label>
+<input id="email" type="email" required autocomplete="email">
+
+<label>पासवर्ड *</label>
+<input id="password" type="password" minlength="8" required autocomplete="new-password">
+
+<div id="ownerFields">
+<label>पत्ता *</label>
+<input id="address" required>
+</div>
+
+<div id="driverFields" hidden>
+<label>Driving Licence Number *</label>
+<input id="licence">
+</div>
+
+<button class="submit" type="submit" id="submitBtn">Registration करा</button>
+</form>
+
+<div id="msg" role="status" aria-live="polite"></div>
+<p class="small">Registration नंतर MATOSHREE Admin कडून मंजुरी मिळाल्यावरच खाते सक्रिय होईल.</p>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://ywbgpyrevwdiymymtlxy.supabase.co";
+const SUPABASE_KEY = "sb_publishable_i5e8pBYCYMEbHGTpL8gRXA_mSv-dCBR";
+
+const db = window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const $ = id => document.getElementById(id);
+
+let type = "owner";
+
+function setType(value){
+  type = value;
+  $("ownerTab").classList.toggle("active",type==="owner");
+  $("driverTab").classList.toggle("active",type==="driver");
+
+  $("ownerFields").hidden = type !== "owner";
+  $("driverFields").hidden = type !== "driver";
+
+  $("address").required = type === "owner";
+  $("licence").required = type === "driver";
+
+  $("msg").textContent = "";
+}
+
+$("ownerTab").addEventListener("click",()=>setType("owner"));
+$("driverTab").addEventListener("click",()=>setType("driver"));
+
+$("regForm").addEventListener("submit",async(e)=>{
+  e.preventDefault();
+
+  const btn = $("submitBtn");
+  const msg = $("msg");
+
+  btn.disabled = true;
+  msg.textContent = "Registration प्रक्रिया सुरू आहे...";
+
+  const fullName = $("name").value.trim();
+  const phone = $("mobile").value.trim();
+  const mail = $("email").value.trim().toLowerCase();
+  const pass = $("password").value;
+  const address = $("address").value.trim();
+  const licence = $("licence").value.trim();
+
+  try {
+    const metadata = {
+      full_name: fullName,
+      mobile: phone,
+      marketplace_role: type
+    };
+
+    if(type === "owner"){
+      metadata.address = address;
+    } else {
+      metadata.licence_number = licence;
+    }
+
+    const {data,error} = await db.auth.signUp({
+      email: mail,
+      password: pass,
+      options: {
+        data: metadata
+      }
+    });
+
+    if(error) throw error;
+
+    if(!data.user){
+      throw new Error("Registration पूर्ण झाले नाही. पुन्हा प्रयत्न करा.");
+    }
+
+    if(!data.session){
+      msg.textContent =
+        "Registration विनंती तयार झाली! तुमच्या ई-मेलवर आलेली Confirmation Link उघडा. तुमची Profile नोंद तयार झाली असून Admin मंजुरी बाकी आहे.";
+    } else {
+      msg.textContent =
+        "Registration यशस्वी! तुमची Profile तयार झाली आहे. Admin मंजुरीची प्रतीक्षा करा.";
+    }
+
+    $("regForm").reset();
+
+  } catch(err) {
+    msg.textContent = "त्रुटी: " + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
