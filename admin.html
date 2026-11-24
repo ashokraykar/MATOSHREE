@@ -7,20 +7,88 @@
 <section id="loginView" class="card login"><h1>Admin Login</h1><p class="sub">फक्त अधिकृत Admin साठी.</p><div id="loginMsg" class="notice hidden"></div><form id="loginForm"><label for="email">Admin Email</label><input id="email" type="email" autocomplete="username" required><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required><div style="margin-top:18px"><button id="loginBtn" type="submit" style="width:100%">Login</button></div><button id="forgotPasswordBtn" type="button" class="secondary" style="width:100%;margin-top:10px">Forgot Password? / Password विसरलात?</button><div id="resetMsg" class="notice hidden" aria-live="polite"></div></form></section>
 <section id="appView" class="hidden"><div class="row" style="justify-content:space-between"><div><h1>Booking Dashboard</h1><p class="sub">बुकिंग तपासा आणि वाहन उपलब्धता नियंत्रित करा.</p></div><button id="refreshBtn" class="secondary" style="flex:0 0 auto">↻ Refresh</button></div>
 <div class="stats"><div class="stat"><small>एकूण बुकिंग</small><b id="totalCount">0</b></div><div class="stat"><small>Pending</small><b id="pendingCount">0</b></div><div class="stat"><small>Confirmed</small><b id="confirmedCount">0</b></div><div class="stat"><small>Cancelled</small><b id="cancelledCount">0</b></div></div><div id="appMsg" class="notice hidden"></div>
-<nav class="tabs"><button class="active" data-tab="bookings">Bookings</button><button data-tab="vehicles">Vehicles</button><button data-tab="blocks">Vehicle Blocks</button></nav>
+<nav class="tabs"><button class="active" data-tab="bookings">Bookings</button><button data-tab="vehicles">Vehicles</button><button data-tab="blocks">Vehicle Blocks</button><button data-tab="marketplace">Marketplace</button></nav>
 <section id="bookingsTab" class="card"><div class="row"><h2 style="flex:1">Customer Bookings</h2><select id="statusFilter" style="max-width:190px"><option value="all">सर्व Status</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option></select></div><div class="tablewrap"><table><thead><tr><th>ग्राहक</th><th>गाडी</th><th>प्रवासी</th><th>प्रवास</th><th>वेळ</th><th>Status</th><th>Action</th></tr></thead><tbody id="bookingRows"><tr><td colspan="7">लोड होत आहे...</td></tr></tbody></table></div></section>
 <section id="vehiclesTab" class="card hidden"><h2>Vehicle Availability</h2><p class="sub">गाडी तात्पुरती उपलब्ध / अनुपलब्ध करा.</p><div class="tablewrap"><table><thead><tr><th>गाडी</th><th>Capacity</th><th>सध्याची स्थिती</th><th>Action</th></tr></thead><tbody id="vehicleRows"></tbody></table></div></section>
-<section id="blocksTab" class="card hidden"><h2>गाडी ठराविक वेळेस Block करा</h2><p class="sub">दुरुस्ती, वैयक्तिक वापर किंवा इतर कारणासाठी वेळ राखून ठेवा.</p><form id="blockForm"><div class="row"><div><label>गाडी</label><select id="blockVehicle" required></select></div><div><label>कारण</label><input id="blockReason" maxlength="120" placeholder="उदा. Servicing" required></div></div><div class="row"><div><label>सुरुवात</label><input id="blockStart" type="datetime-local" required></div><div><label>समाप्ती</label><input id="blockEnd" type="datetime-local" required></div></div><button type="submit" style="margin-top:14px">Save Vehicle Block</button></form><h2 style="margin-top:28px">Existing Blocks</h2><div class="tablewrap"><table><thead><tr><th>गाडी</th><th>वेळ</th><th>कारण</th><th>Action</th></tr></thead><tbody id="blockRows"></tbody></table></div></section></section></main>
+<section id="blocksTab" class="card hidden"><h2>गाडी ठराविक वेळेस Block करा</h2><p class="sub">दुरुस्ती, वैयक्तिक वापर किंवा इतर कारणासाठी वेळ राखून ठेवा.</p><form id="blockForm"><div class="row"><div><label>गाडी</label><select id="blockVehicle" required></select></div><div><label>कारण</label><input id="blockReason" maxlength="120" placeholder="उदा. Servicing" required></div></div><div class="row"><div><label>सुरुवात</label><input id="blockStart" type="datetime-local" required></div><div><label>समाप्ती</label><input id="blockEnd" type="datetime-local" required></div></div><button type="submit" style="margin-top:14px">Save Vehicle Block</button></form><h2 style="margin-top:28px">Existing Blocks</h2><div class="tablewrap"><table><thead><tr><th>गाडी</th><th>वेळ</th><th>कारण</th><th>Action</th></tr></thead><tbody id="blockRows"></tbody></table></div></section>
+<section id="marketplaceTab" class="card hidden">
+<h2>Marketplace Management</h2>
+<p class="sub">Owner, Driver आणि Marketplace Vehicle नोंदणी मंजूर किंवा नाकारण्यासाठी.</p>
+<div class="tabs" style="margin:12px 0">
+<button class="active" data-market-tab="owners">Owners</button>
+<button data-market-tab="drivers">Drivers</button>
+<button data-market-tab="marketVehicles">Marketplace Vehicles</button>
+</div>
+<div id="marketMsg" class="notice hidden"></div>
+<section id="ownersPanel"><h2>Owner Registrations</h2><div class="tablewrap"><table><thead><tr><th>नाव</th><th>Email</th><th>Mobile</th><th>Address</th><th>Status</th><th>Action</th></tr></thead><tbody id="ownerRows"></tbody></table></div></section>
+<section id="driversPanel" class="hidden"><h2>Driver Registrations</h2><div class="tablewrap"><table><thead><tr><th>नाव</th><th>Email</th><th>Mobile</th><th>Licence</th><th>Status</th><th>Action</th></tr></thead><tbody id="driverRows"></tbody></table></div></section>
+<section id="marketVehiclesPanel" class="hidden"><h2>Marketplace Vehicle Registrations</h2><div class="tablewrap"><table><thead><tr><th>वाहन</th><th>नंबर</th><th>Capacity</th><th>Rate/km</th><th>Owner ID</th><th>Status</th><th>Available</th><th>Action</th></tr></thead><tbody id="marketVehicleRows"></tbody></table></div></section>
+</section></section></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
-(function(){'use strict';const URL='https://ywbgpyrevwdiymymtlxy.supabase.co';const KEY='sb_publishable_i5e8pBYCYMEbHGTpL8gRXA_mSv-dCBR';const db=window.supabase.createClient(URL,KEY);const $=id=>document.getElementById(id);let bookings=[],vehicles=[],blocks=[];
+(function(){'use strict';const URL='https://ywbgpyrevwdiymymtlxy.supabase.co';const KEY='sb_publishable_i5e8pBYCYMEbHGTpL8gRXA_mSv-dCBR';const db=window.supabase.createClient(URL,KEY);const $=id=>document.getElementById(id);let bookings=[],vehicles=[],blocks=[],marketOwners=[],marketDrivers=[],marketVehicles=[];
 function msg(id,t,c){const e=$(id);e.textContent=t;e.className='notice '+(c||'');}function clear(id){$(id).classList.add('hidden')}function fmt(v){return v?new Date(v).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}):'—'}function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function vname(id){return vehicles.find(v=>v.id===id)?.name||'Unknown vehicle'}
-async function load(){clear('appMsg');const [b,v,bl]=await Promise.all([db.from('bookings').select('id,customer_name,phone,pickup_location,destination,vehicle_id,passenger_count,start_at,end_at,status').order('start_at',{ascending:false}),db.from('vehicles').select('id,name,capacity,is_active').order('name'),db.from('vehicle_blocks').select('id,vehicle_id,start_at,end_at,reason').order('start_at',{ascending:false})]);if(b.error||v.error||bl.error){msg('appMsg','डेटा लोड झाला नाही: '+(b.error?.message||v.error?.message||bl.error?.message)+' — RLS policies तपासा.','error');return}bookings=b.data||[];vehicles=v.data||[];blocks=bl.data||[];$('totalCount').textContent=bookings.length;$('pendingCount').textContent=bookings.filter(x=>x.status==='pending').length;$('confirmedCount').textContent=bookings.filter(x=>x.status==='confirmed').length;$('cancelledCount').textContent=bookings.filter(x=>x.status==='cancelled').length;renderB();renderV();renderBl()}
+async function load(){clear('appMsg');const [b,v,bl]=await Promise.all([db.from('bookings').select('id,customer_name,phone,pickup_location,destination,vehicle_id,passenger_count,start_at,end_at,status').order('start_at',{ascending:false}),db.from('vehicles').select('id,name,capacity,is_active').order('name'),db.from('vehicle_blocks').select('id,vehicle_id,start_at,end_at,reason').order('start_at',{ascending:false})]);if(b.error||v.error||bl.error){msg('appMsg','डेटा लोड झाला नाही: '+(b.error?.message||v.error?.message||bl.error?.message)+' — RLS policies तपासा.','error');return}bookings=b.data||[];vehicles=v.data||[];blocks=bl.data||[];$('totalCount').textContent=bookings.length;$('pendingCount').textContent=bookings.filter(x=>x.status==='pending').length;$('confirmedCount').textContent=bookings.filter(x=>x.status==='confirmed').length;$('cancelledCount').textContent=bookings.filter(x=>x.status==='cancelled').length;renderB();renderV();renderBl();await loadMarketplace()}
 
 function renderB(){const f=$('statusFilter').value,arr=bookings.filter(x=>f==='all'||x.status===f);$('bookingRows').innerHTML=arr.length?arr.map(x=>`<tr><td><b>${esc(x.customer_name)}</b><br><a href="tel:${esc(x.phone)}">${esc(x.phone)}</a></td><td>${esc(vname(x.vehicle_id))}</td><td>${esc(x.passenger_count)}</td><td>${esc(x.pickup_location)} → ${esc(x.destination)}</td><td>${fmt(x.start_at)}<br>ते ${fmt(x.end_at)}</td><td><span class="status ${x.status}">${x.status}</span></td><td><div class="actions">${x.status==='pending'?`<button class="good" data-status="confirmed" data-id="${x.id}">Confirm</button>`:''}${x.status==='pending'||x.status==='confirmed'?`<button class="danger" data-status="cancelled" data-id="${x.id}">Cancel</button>`:''}</div></td></tr>`).join(''):'<tr><td colspan="7">या Status मध्ये बुकिंग नाही.</td></tr>'}
 function renderV(){$('vehicleRows').innerHTML=vehicles.map(v=>`<tr><td><b>${esc(v.name)}</b></td><td>${v.capacity}</td><td>${v.is_active?'Available':'Unavailable'}</td><td><button class="${v.is_active?'danger':'good'}" data-vehicle="${v.id}" data-active="${!v.is_active}">${v.is_active?'Unavailable करा':'Available करा'}</button></td></tr>`).join('');$('blockVehicle').innerHTML=vehicles.map(v=>`<option value="${v.id}">${esc(v.name)}</option>`).join('')}
 function renderBl(){$('blockRows').innerHTML=blocks.length?blocks.map(b=>`<tr><td>${esc(vname(b.vehicle_id))}</td><td>${fmt(b.start_at)}<br>ते ${fmt(b.end_at)}</td><td>${esc(b.reason||'—')}</td><td><button class="danger" data-unblock="${b.id}">Remove</button></td></tr>`).join(''):'<tr><td colspan="4">सध्या कोणतीही Block entry नाही.</td></tr>'}
 async function status(id,s){const {error}=await db.from('bookings').update({status:s}).eq('id',id);if(error){msg('appMsg','Status बदलता आला नाही: '+error.message,'error');return}msg('appMsg','बुकिंग Status अपडेट झाला.','success');await load()}
 document.addEventListener('click',async e=>{let x=e.target.closest('[data-status]');if(x){x.disabled=true;await status(x.dataset.id,x.dataset.status);return}x=e.target.closest('[data-vehicle]');if(x){x.disabled=true;const {error}=await db.from('vehicles').update({is_active:x.dataset.active==='true'}).eq('id',x.dataset.vehicle);if(error)msg('appMsg','Vehicle update error: '+error.message,'error');else msg('appMsg','Vehicle availability अपडेट झाली.','success');await load();return}x=e.target.closest('[data-unblock]');if(x){if(!confirm('हा vehicle block काढायचा आहे का?'))return;x.disabled=true;const {error}=await db.from('vehicle_blocks').delete().eq('id',x.dataset.unblock);if(error)msg('appMsg','Block remove झाला नाही: '+error.message,'error');else msg('appMsg','Vehicle block काढला.','success');await load()}});
+
+async function loadMarketplace(){
+  clear('marketMsg');
+  const [o,d,m]=await Promise.all([
+    db.from('marketplace_owners').select('id,full_name,email,mobile,address,approval_status,created_at').order('created_at',{ascending:false}),
+    db.from('marketplace_drivers').select('id,full_name,email,mobile,licence_number,approval_status,created_at').order('created_at',{ascending:false}),
+    db.from('marketplace_vehicles').select('id,owner_id,driver_id,vehicle_name,vehicle_number,passenger_capacity,rate_per_km,approval_status,is_available,created_at').order('created_at',{ascending:false})
+  ]);
+  const err=o.error||d.error||m.error;
+  if(err){msg('marketMsg','Marketplace डेटा लोड झाला नाही: '+err.message,'error');return}
+  marketOwners=o.data||[];marketDrivers=d.data||[];marketVehicles=m.data||[];
+  renderMarketplace();
+}
+function statusPill(s){return `<span class="status ${s==='approved'?'confirmed':s==='rejected'?'cancelled':'pending'}">${esc(s||'pending')}</span>`}
+function approvalActions(type,id,status){
+  if(status==='approved') return `<button class="danger" data-market-action="${type}" data-id="${id}" data-next="suspended">Suspend</button>`;
+  if(status==='suspended') return `<button class="good" data-market-action="${type}" data-id="${id}" data-next="approved">Re-approve</button>`;
+  return `<button class="good" data-market-action="${type}" data-id="${id}" data-next="approved">Approve</button><button class="danger" data-market-action="${type}" data-id="${id}" data-next="rejected">Reject</button>`;
+}
+function renderMarketplace(){
+  $('ownerRows').innerHTML=marketOwners.length?marketOwners.map(x=>`<tr><td><b>${esc(x.full_name)}</b></td><td>${esc(x.email)}</td><td>${esc(x.mobile)}</td><td>${esc(x.address||'—')}</td><td>${statusPill(x.approval_status)}</td><td><div class="actions">${approvalActions('owner',x.id,x.approval_status)}</div></td></tr>`).join(''):'<tr><td colspan="6">Owner नोंदणी उपलब्ध नाही.</td></tr>';
+  $('driverRows').innerHTML=marketDrivers.length?marketDrivers.map(x=>`<tr><td><b>${esc(x.full_name)}</b></td><td>${esc(x.email||'—')}</td><td>${esc(x.mobile)}</td><td>${esc(x.licence_number||'—')}</td><td>${statusPill(x.approval_status)}</td><td><div class="actions">${approvalActions('driver',x.id,x.approval_status)}</div></td></tr>`).join(''):'<tr><td colspan="6">Driver नोंदणी उपलब्ध नाही.</td></tr>';
+  $('marketVehicleRows').innerHTML=marketVehicles.length?marketVehicles.map(x=>`<tr><td><b>${esc(x.vehicle_name)}</b></td><td>${esc(x.vehicle_number)}</td><td>${esc(x.passenger_capacity)}</td><td>₹${esc(x.rate_per_km)}</td><td>${esc(x.owner_id)}</td><td>${statusPill(x.approval_status)}</td><td>${x.is_available?'Yes':'No'}</td><td><div class="actions">${approvalActions('marketVehicle',x.id,x.approval_status)}${x.approval_status==='approved'?`<button class="${x.is_available?'danger':'good'}" data-market-availability="${x.id}" data-next="${!x.is_available}">${x.is_available?'Unavailable':'Available'}</button>`:''}</div></td></tr>`).join(''):'<tr><td colspan="8">Marketplace Vehicle नोंदणी उपलब्ध नाही.</td></tr>';
+}
+async function updateMarketplaceStatus(type,id,next){
+  const table=type==='owner'?'marketplace_owners':type==='driver'?'marketplace_drivers':'marketplace_vehicles';
+  const values={approval_status:next};
+  if(type==='marketVehicle' && next!=='approved') values.is_available=false;
+  const {error}=await db.from(table).update(values).eq('id',id);
+  if(error){msg('marketMsg','Status अपडेट झाला नाही: '+error.message,'error');return}
+  msg('marketMsg','Marketplace status अपडेट झाला.','success');
+  await loadMarketplace();
+}
+document.addEventListener('click',async e=>{
+  let a=e.target.closest('[data-market-action]');
+  if(a){
+    const type=a.dataset.marketAction, next=a.dataset.next;
+    const label=next==='approved'?'मंजूर':next==='rejected'?'Reject':'Suspend';
+    if(!confirm('ही नोंद '+label+' करायची आहे का?'))return;
+    a.disabled=true;await updateMarketplaceStatus(type,a.dataset.id,next);return;
+  }
+  a=e.target.closest('[data-market-availability]');
+  if(a){
+    a.disabled=true;
+    const {error}=await db.from('marketplace_vehicles').update({is_available:a.dataset.next==='true'}).eq('id',a.dataset.marketAvailability).eq('approval_status','approved');
+    if(error)msg('marketMsg','Availability बदलता आली नाही: '+error.message,'error');
+    else msg('marketMsg','Vehicle availability अपडेट झाली.','success');
+    await loadMarketplace();
+  }
+});
+document.querySelectorAll('[data-market-tab]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-market-tab]').forEach(x=>x.classList.toggle('active',x===b));
+  ['owners','drivers','marketVehicles'].forEach(t=>$(t+'Panel').classList.toggle('hidden',t!==b.dataset.marketTab));
+}));
+
 async function authorizeAdmin(u){
   const {data,error}=await db.from('admin_users').select('user_id').eq('user_id',u.id).maybeSingle();
   if(error){await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('logoutBtn').classList.add('hidden');$('userEmail').textContent='';msg('loginMsg','Admin अधिकार तपासता आले नाहीत: '+error.message+' — Supabase RLS/permissions तपासा.','error');return false}
@@ -30,7 +98,7 @@ async function authorizeAdmin(u){
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();clear('loginMsg');$('loginBtn').disabled=true;const {data,error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});$('loginBtn').disabled=false;if(error){msg('loginMsg','Login अयशस्वी: '+error.message,'error');return}await authorizeAdmin(data.user)});
 $('forgotPasswordBtn').addEventListener('click',async()=>{clear('resetMsg');const email=$('email').value.trim();if(!email){msg('resetMsg','कृपया आधी Admin Email भरा.','error');$('email').focus();return}const btn=$('forgotPasswordBtn');btn.disabled=true;btn.textContent='Email पाठवत आहे...';const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:'https://ashokraykar.github.io/MATOSHREE/reset-password.html'});btn.disabled=false;btn.textContent='Forgot Password? / Password विसरलात?';if(error){msg('resetMsg','Reset Email पाठवता आला नाही: '+error.message,'error');return}msg('resetMsg','जर हा Email नोंदणीकृत असेल तर Password Reset Email पाठवला आहे. Gmail मधील नवीनतम Email उघडा. जुन्या Reset लिंक वापरू नका.','success')});
 $('logoutBtn').addEventListener('click',async()=>{await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('logoutBtn').classList.add('hidden');$('userEmail').textContent=''});$('refreshBtn').addEventListener('click',load);$('statusFilter').addEventListener('change',renderB);
-document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));['bookings','vehicles','blocks'].forEach(t=>$(t+'Tab').classList.toggle('hidden',t!==b.dataset.tab))}));
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));['bookings','vehicles','blocks','marketplace'].forEach(t=>$(t+'Tab').classList.toggle('hidden',t!==b.dataset.tab))}));
 $('blockForm').addEventListener('submit',async e=>{e.preventDefault();const s=new Date($('blockStart').value),n=new Date($('blockEnd').value);if(!(n>s)){msg('appMsg','समाप्तीची वेळ सुरुवातीपेक्षा पुढे असावी.','error');return}const {error}=await db.from('vehicle_blocks').insert({vehicle_id:$('blockVehicle').value,start_at:s.toISOString(),end_at:n.toISOString(),reason:$('blockReason').value.trim()});if(error){msg('appMsg','Vehicle block सेव्ह झाला नाही: '+error.message,'error');return}$('blockForm').reset();msg('appMsg','Vehicle block सेव्ह झाला.','success');await load()});
 db.auth.getSession().then(({data})=>{if(data.session)authorizeAdmin(data.session.user)});
 })();
