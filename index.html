@@ -184,6 +184,27 @@ footer .footer-grid p{line-height:1.7}
 .marketplace-state{color:#806D68;font-size:14px}
 @media(max-width:650px){.marketplace-fleet-grid{grid-template-columns:1fr}}
 </style>
+
+<style>
+/* Marketplace direct booking form */
+.marketplace-vehicle-action{display:inline-flex;align-items:center;justify-content:center;margin-top:12px;padding:11px 16px;border:0;border-radius:10px;background:#641C2A;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer;width:100%}
+.market-booking-overlay{position:fixed;inset:0;z-index:9999;background:rgba(20,12,14,.68);display:none;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.market-booking-overlay.open{display:flex}
+.market-booking-dialog{width:min(100%,560px);max-height:92vh;overflow:auto;background:#fffdf9;color:#241b1b;border-radius:18px;padding:22px;box-shadow:0 20px 60px #0004}
+.market-booking-dialog h3{margin:0 40px 8px 0;font-size:24px}
+.market-booking-close{float:right;border:0;background:#f3e9e7;border-radius:50%;width:36px;height:36px;font-size:22px;cursor:pointer}
+.market-booking-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.market-booking-form label{display:block;font-weight:700;font-size:14px}
+.market-booking-form input,.market-booking-form select{display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:11px;border:1px solid #d8caca;border-radius:9px;background:#fff;font:inherit;color:#241b1b}
+.market-booking-form .full{grid-column:1/-1}
+.market-booking-estimate{grid-column:1/-1;background:#f8f0e7;border-radius:12px;padding:13px;font-size:14px}
+.market-booking-estimate strong{font-size:20px;color:#641C2A}
+.market-booking-submit{grid-column:1/-1;border:0;border-radius:10px;background:#641C2A;color:#fff;padding:13px;font:inherit;font-weight:800;cursor:pointer}
+.market-booking-submit:disabled{opacity:.55;cursor:wait}
+.market-booking-note{font-size:12px;color:#65595a;line-height:1.5;margin:6px 0 0}
+@media(max-width:520px){.market-booking-form{grid-template-columns:1fr}.market-booking-form .full,.market-booking-estimate,.market-booking-submit{grid-column:1}.market-booking-dialog{padding:17px}}
+</style>
+
 </head><body>
 <title>Matoshree Tours &amp; Travels</title>
 <meta content="cover" name="claude:viewport-fit-sides"/>
@@ -758,33 +779,83 @@ button,a,input,select{ -webkit-tap-highlight-color:transparent}
 })();
 </script>
 
+<!-- Marketplace direct booking modal (separate from the existing MATOSHREE fleet booking flow) -->
+<div class="market-booking-overlay" id="marketBookingOverlay" role="dialog" aria-modal="true" aria-labelledby="marketBookingTitle">
+  <div class="market-booking-dialog">
+    <button type="button" class="market-booking-close" id="marketBookingClose" aria-label="Close">×</button>
+    <h3 id="marketBookingTitle">पार्टनर वाहन बुकिंग</h3>
+    <p class="market-booking-note" id="marketBookingVehicleInfo">निवडलेले पार्टनर वाहन</p>
+    <form class="market-booking-form" id="marketBookingForm">
+      <label>ग्राहकाचे नाव<input name="customer_name" required maxlength="120" autocomplete="name"></label>
+      <label>मोबाईल नंबर<input name="customer_mobile" required type="tel" inputmode="numeric" pattern="[0-9+ ()-]{10,16}" maxlength="16" autocomplete="tel"></label>
+      <label class="full">Pickup Location<input name="pickup_location" required maxlength="250" placeholder="उदा. पुणे रेल्वे स्टेशन"></label>
+      <label class="full">Destination<input name="destination" required maxlength="250" placeholder="उदा. परळी वैजनाथ मंदिर"></label>
+      <label>Trip Type<select name="trip_type"><option value="one_way">One Way (एकेरी)</option><option value="round_trip">Round Trip (येणे-जाणे)</option></select></label>
+      <label>प्रवासाची तारीख<input name="trip_date" type="date"></label>
+      <label>प्रवासाची वेळ<input name="trip_time" type="time"></label>
+      <div class="market-booking-estimate" id="marketBookingEstimate" aria-live="polite">Pickup आणि Destination भरून अंदाजित अंतर व भाडे तपासा.</div>
+      <p class="market-booking-note full">मार्गाचे अंतर OpenStreetMap मार्गावरून अंदाजित केले जाईल. Toll चे अचूक स्वयंचलित मूल्य उपलब्ध नाही; प्रत्यक्ष Toll वेगळा लागू शकतो. ऑनलाइन/अॅडव्हान्स पेमेंट नाही—प्रवासाच्या वेळी पैसे द्यायचे.</p>
+      <button class="market-booking-submit" id="marketBookingSubmit" type="submit">अंतर व भाडे तपासा</button>
+    </form>
+  </div>
+</div>
+
 <script>
-/* Public marketplace vehicle listing. This is display-only; customer request flow will be connected separately. */
+/* Marketplace partner vehicle listing + direct booking. Existing static-fleet booking flow is untouched. */
 (function(){
   var endpoint='https://ywbgpyrevwdiymymtlxy.supabase.co/rest/v1/marketplace_vehicles?select=id,vehicle_name,vehicle_number,passenger_capacity,rate_per_km&approval_status=eq.approved&is_available=eq.true&order=created_at.desc';
+  var apiRoot='https://ywbgpyrevwdiymymtlxy.supabase.co/rest/v1/';
   var publicKey='sb_publishable_i5e8pBYCYMEbHGTpL8gRXA_mSv-dCBR';
   var state=document.getElementById('marketplaceFleetState');
   var grid=document.getElementById('marketplaceFleetGrid');
   var wrap=document.getElementById('marketplaceFleetWrap');
-  if(!state||!grid||!wrap)return;
+  var overlay=document.getElementById('marketBookingOverlay');
+  var form=document.getElementById('marketBookingForm');
+  var estimate=document.getElementById('marketBookingEstimate');
+  var submit=document.getElementById('marketBookingSubmit');
+  if(!state||!grid||!wrap||!overlay||!form)return;
+  var selectedVehicle=null,routeEstimate=null,checkedOnce=false;
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function closeModal(){overlay.classList.remove('open');document.body.style.overflow=''}
+  function openModal(v){selectedVehicle=v;routeEstimate=null;checkedOnce=false;form.reset();document.getElementById('marketBookingVehicleInfo').textContent=(v.vehicle_name||'Partner Vehicle')+' • '+(v.vehicle_number||'')+' • ₹'+(Number(v.rate_per_km)||0)+'/किमी';estimate.textContent='Pickup आणि Destination भरून अंदाजित अंतर व भाडे तपासा.';submit.textContent='अंतर व भाडे तपासा';submit.disabled=false;overlay.classList.add('open');document.body.style.overflow='hidden'}
+  document.getElementById('marketBookingClose').addEventListener('click',closeModal);
+  overlay.addEventListener('click',function(e){if(e.target===overlay)closeModal()});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal()});
+  function apiHeaders(){return {'apikey':publicKey,'Authorization':'Bearer '+publicKey,'Content-Type':'application/json','Accept':'application/json'}}
+  function geocode(query){return fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(query)).then(function(r){if(!r.ok)throw new Error('स्थान शोधता आले नाही.');return r.json()}).then(function(rows){if(!rows||!rows[0])throw new Error('हे स्थान सापडले नाही. कृपया जवळचे ओळखीचे ठिकाण लिहा.');return {lat:Number(rows[0].lat),lon:Number(rows[0].lon),label:rows[0].display_name}})}
+  function getRoute(a,b){return fetch('https://router.project-osrm.org/route/v1/driving/'+a.lon+','+a.lat+';'+b.lon+','+b.lat+'?overview=false&alternatives=false&steps=false').then(function(r){if(!r.ok)throw new Error('मार्ग मोजता आला नाही.');return r.json()}).then(function(data){if(!data||data.code!=='Ok'||!data.routes||!data.routes[0])throw new Error('या ठिकाणांमध्ये वाहनाचा मार्ग उपलब्ध नाही.');return Number(data.routes[0].distance)/1000})}
+  function money(n){return '₹'+Math.round(n).toLocaleString('en-IN')}
+  async function calcRoute(){
+    var fd=new FormData(form),pickup=String(fd.get('pickup_location')||'').trim(),destination=String(fd.get('destination')||'').trim(),type=fd.get('trip_type');
+    if(!pickup||!destination){estimate.textContent='कृपया Pickup आणि Destination दोन्ही भरा.';return}
+    submit.disabled=true;submit.textContent='मार्ग आणि अंतर तपासत आहोत…';estimate.textContent='स्थान शोधत आहोत. कृपया थांबा…';
+    try{
+      var a=await geocode(pickup);await new Promise(function(resolve){setTimeout(resolve,1100)});var b=await geocode(destination);
+      var outbound=await getRoute(a,b),ret=type==='round_trip'?await getRoute(b,a):0,total=outbound+ret,rate=Number(selectedVehicle.rate_per_km)||0,fare=Math.round(total*rate);
+      routeEstimate={outbound:outbound,returnDistance:ret,total:total,fare:fare,rate:rate};checkedOnce=true;
+      estimate.innerHTML='एकेरी अंतर: <b>'+outbound.toFixed(1)+' किमी</b>'+(type==='round_trip'?'<br>परतीचे अंतर: <b>'+ret.toFixed(1)+' किमी</b>':'')+'<br>एकूण अंतर: <b>'+total.toFixed(1)+' किमी</b><br>दर: <b>'+money(rate)+'/किमी</b><br>अंदाजित भाडे: <strong>'+money(fare)+'</strong><br>Toll: <b>अंदाज उपलब्ध नाही</b> — प्रत्यक्ष Toll अतिरिक्त';
+      submit.textContent='बुकिंग विनंती पाठवा';submit.disabled=false;
+    }catch(err){submit.disabled=false;submit.textContent='पुन्हा अंतर तपासा';estimate.textContent=err.message||'मार्ग तपासताना त्रुटी आली.'}
+  }
+  form.addEventListener('change',function(e){if(e.target.name==='trip_type'||e.target.name==='pickup_location'||e.target.name==='destination'){routeEstimate=null;checkedOnce=false;submit.textContent='अंतर व भाडे तपासा'}});
+  form.addEventListener('submit',function(e){e.preventDefault();if(!checkedOnce||!routeEstimate){calcRoute().catch(function(){});return}
+    var fd=new FormData(form),phone=String(fd.get('customer_mobile')||'').replace(/[^0-9]/g,'');if(phone.length<10||phone.length>13){estimate.textContent='कृपया योग्य मोबाईल नंबर भरा.';return}
+    var payload={vehicle_id:selectedVehicle.id,customer_name:String(fd.get('customer_name')).trim(),customer_mobile:String(fd.get('customer_mobile')).trim(),pickup_location:String(fd.get('pickup_location')).trim(),destination:String(fd.get('destination')).trim(),estimated_fare:routeEstimate.fare,estimated_toll:0,actual_toll:null,extra_toll_paid_directly:true,status:'pending',trip_date:fd.get('trip_date')||null,trip_time:fd.get('trip_time')||null,trip_type:fd.get('trip_type'),outbound_distance_km:Number(routeEstimate.outbound.toFixed(2)),return_distance_km:Number(routeEstimate.returnDistance.toFixed(2)),rate_per_km:routeEstimate.rate,toll_estimate_status:'unavailable'};
+    submit.disabled=true;submit.textContent='बुकिंग विनंती पाठवत आहोत…';estimate.textContent='तुमची विनंती सेव्ह करत आहोत…';
+    fetch(apiRoot+'marketplace_booking_requests',{method:'POST',headers:Object.assign(apiHeaders(),{'Prefer':'return=minimal'}),body:JSON.stringify(payload)})
+      .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t||'Booking request could not be saved')});estimate.textContent='बुकिंग विनंती यशस्वीरित्या पाठवली! MATOSHREE टीम तुमच्याशी संपर्क करेल. पेमेंट प्रवासाच्या वेळी करायचे.';submit.textContent='विनंती पाठवली';checkedOnce=false;setTimeout(closeModal,3000)})
+      .catch(function(err){submit.disabled=false;submit.textContent='पुन्हा प्रयत्न करा';estimate.textContent='बुकिंग सेव्ह झाले नाही. Supabase मध्ये INSERT परवानगी/RLS तपासा. '+(err.message||'')})
+  });
   fetch(endpoint,{headers:{'apikey':publicKey,'Authorization':'Bearer '+publicKey,'Accept':'application/json'}})
     .then(function(r){if(!r.ok)throw new Error('Vehicle list could not be loaded');return r.json()})
     .then(function(rows){
       if(!Array.isArray(rows)||!rows.length){state.textContent='सध्या पार्टनरची उपलब्ध वाहने नाहीत.';return}
       state.textContent='';
       rows.forEach(function(v){
-        var name=esc(v.vehicle_name||'Partner Vehicle');
-        var number=esc(v.vehicle_number||'');
-        var capacity=Number(v.passenger_capacity)||0;
-        var rate=Number(v.rate_per_km)||0;
-        var card=document.createElement('article');
-        card.className='marketplace-vehicle-card';
-        card.innerHTML='<h4>'+name+'</h4>'+
-          '<div class="marketplace-vehicle-number">गाडी क्रमांक: '+number+'</div>'+
-          '<div class="marketplace-vehicle-meta"><span>👥 '+capacity+' प्रवासी</span><span class="marketplace-vehicle-rate">₹'+rate+'/किमी</span></div>'+
-          '<a class="marketplace-vehicle-action" href="https://wa.me/917083374944?text='+encodeURIComponent('नमस्कार, मला '+(v.vehicle_name||'पार्टनर वाहन')+' ('+(v.vehicle_number||'')+') बद्दल बुकिंग चौकशी करायची आहे.')+'">वाहनाची चौकशी करा</a>';
-        grid.appendChild(card);
+        var name=esc(v.vehicle_name||'Partner Vehicle'),number=esc(v.vehicle_number||''),capacity=Number(v.passenger_capacity)||0,rate=Number(v.rate_per_km)||0;
+        var card=document.createElement('article');card.className='marketplace-vehicle-card';
+        card.innerHTML='<h4>'+name+'</h4><div class="marketplace-vehicle-number">गाडी क्रमांक: '+number+'</div><div class="marketplace-vehicle-meta"><span>👥 '+capacity+' प्रवासी</span><span class="marketplace-vehicle-rate">₹'+rate+'/किमी</span></div><button type="button" class="marketplace-vehicle-action">थेट बुकिंग करा</button>';
+        card.querySelector('button').addEventListener('click',function(){openModal(v)});grid.appendChild(card);
       });
     })
     .catch(function(){state.textContent='पार्टनर वाहनांची माहिती सध्या लोड होत नाही. कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.'});
