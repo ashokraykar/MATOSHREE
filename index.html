@@ -1,24 +1,6 @@
 <!DOCTYPE html>
 
-<html><head>
-<script>
-/* MATOSHREE: prevent stale cached pages from requiring a hard refresh */
-(function () {
-  if (!('serviceWorker' in navigator)) return;
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.getRegistrations().then(function (registrations) {
-      return Promise.all(registrations.map(function (registration) {
-        return registration.unregister();
-      }));
-    }).catch(function () {});
-    if ('caches' in window) {
-      caches.keys().then(function (keys) {
-        return Promise.all(keys.map(function (key) { return caches.delete(key); }));
-      }).catch(function () {});
-    }
-  });
-})();
-</script><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
+<html><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
 /* ROYAL INDIAN REDESIGN */
 :root{color-scheme:light!important}
 body{background:#F7F2E9;color:#2B1718;font-family:'Mukta',system-ui,sans-serif}
@@ -586,8 +568,8 @@ button,a,input,select{ -webkit-tap-highlight-color:transparent}
 </div>
 <div class="field"><label for="vFrom">कुठून (पिकअप)</label><input id="vFrom" maxlength="120" placeholder="उदा. पिंपरी, पुणे" required="" type="text"/></div>
 <div class="field"><label for="vTo">कुठे (ठिकाण)</label><input id="vTo" maxlength="120" placeholder="उदा. महाबळेश्वर" required="" type="text"/></div>
-<a class="btn btn-ghost send" href="https://www.google.com/maps" id="vMap" rel="noopener" target="_blank">Google Maps वर मार्ग पाहा ↗</a>
-<div class="field"><label for="vKm">अंतर (किलोमीटर) — आपोआप</label><input id="vKm" inputmode="decimal" min="0.1" placeholder="Pickup आणि Destination भरल्यावर अंतर आपोआप भरेल" required="" step="0.1" type="number" readonly aria-readonly="true"/><small class="note">Pickup आणि Destination लिहून निवडल्यानंतर रस्त्याचे अंतर आपोआप मोजले जाईल.</small></div>
+<a class="btn btn-ghost send" href="https://www.google.com/maps" id="vMap" rel="noopener" target="_blank">Google Maps वर अंतर पाहा ↗</a>
+<div class="field"><label for="vKm">अंतर (किलोमीटर)</label><input id="vKm" inputmode="decimal" min="0.1" placeholder="Google Maps मधील एकेरी अंतर भरा" required="" step="0.1" type="number"/></div>
 <div class="field"><label for="vWay">प्रवासाचा प्रकार</label>
 <select id="vWay"><option value="2">येणे-जाणे (दोन्ही बाजू)</option><option value="1">फक्त एकेरी</option></select></div>
 <div class="fare"><span>अंदाजे भाडे<small id="vRate">₹12 प्रति किलोमीटर</small></span><output id="vFare">₹ 0</output></div>
@@ -613,32 +595,6 @@ button,a,input,select{ -webkit-tap-highlight-color:transparent}
   var sheet=$('vSheet'),ids=['vName','vPhone','vDate','vPax','vStart','vEnd','vFrom','vTo','vKm','vWay'],el={},lastFocus=null;
   ids.forEach(function(i){el[i]=$(i)});
   function mult(){return +el.vWay.value||1}
-  var routeMessage='',routeRequest=0,routeTimer=null;
-  function routeNote(text){routeMessage=text||'';update()}
-  function geocodeForDistance(query){
-    return fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(query))
-      .then(function(r){if(!r.ok)throw new Error('स्थान शोधता आले नाही.');return r.json()})
-      .then(function(rows){if(!rows||!rows[0])throw new Error('हे ठिकाण सापडले नाही. कृपया अधिक स्पष्ट पत्ता लिहा.');return {lat:Number(rows[0].lat),lon:Number(rows[0].lon)}});
-  }
-  function autoCalculateDistance(){
-    var request=++routeRequest,origin=el.vFrom.value.trim(),destination=el.vTo.value.trim();
-    el.vKm.value='';routeNote('');
-    if(!origin||!destination){routeNote('Pickup आणि Destination दोन्ही भरल्यावर अंतर आपोआप मोजले जाईल.');return}
-    routeNote('रस्त्याचे अंतर मोजत आहोत…');
-    geocodeForDistance(origin).then(function(a){
-      return new Promise(function(resolve){setTimeout(resolve,1100)}).then(function(){return geocodeForDistance(destination)}).then(function(b){
-        return fetch('https://router.project-osrm.org/route/v1/driving/'+a.lon+','+a.lat+';'+b.lon+','+b.lat+'?overview=false&alternatives=false&steps=false')
-          .then(function(r){if(!r.ok)throw new Error('मार्ग मोजता आला नाही.');return r.json()})
-          .then(function(data){if(!data||data.code!=='Ok'||!data.routes||!data.routes[0])throw new Error('या ठिकाणांमध्ये वाहनाचा मार्ग उपलब्ध नाही.');return Number(data.routes[0].distance)/1000});
-      });
-    }).then(function(km){
-      if(request!==routeRequest)return;
-      el.vKm.value=(Math.round(km*10)/10).toFixed(1);routeNote('एकेरी रस्त्याचे अंतर: '+el.vKm.value+' किमी.');
-    }).catch(function(err){if(request!==routeRequest)return;el.vKm.value='';routeNote((err&&err.message)||'अंतर मोजता आले नाही. कृपया Pickup/Destination पुन्हा तपासा.')});
-  }
-  function scheduleDistance(){clearTimeout(routeTimer);routeTimer=setTimeout(autoCalculateDistance,650)}
-  el.vFrom.addEventListener('change',scheduleDistance);el.vFrom.addEventListener('blur',scheduleDistance);
-  el.vTo.addEventListener('change',scheduleDistance);el.vTo.addEventListener('blur',scheduleDistance);
   function msg(){
     var l=['नमस्कार, मला '+veh+' गाडी बुक करायची आहे.'];
     if(el.vName.value.trim())l.push('नाव: '+el.vName.value.trim());
@@ -659,15 +615,14 @@ button,a,input,select{ -webkit-tap-highlight-color:transparent}
   function update(){
     var km=parseFloat(el.vKm.value),ok=km>0;
     $('vFare').textContent='₹ '+(ok?Math.round(km*mult()*RATE).toLocaleString('en-IN'):'0');
-    $('vKmNote').textContent=(ok&&mult()==2)?(km+' × 2 = '+(km*2)+' किमी वर भाडे मोजले आहे'):(routeMessage||'');
+    $('vKmNote').textContent=(ok&&mult()==2)?(km+' × 2 = '+(km*2)+' किमी वर भाडे मोजले आहे'):'';
     var o=el.vFrom.value.trim(),d=el.vTo.value.trim(),u='https://www.google.com/maps';
     if(o||d)u='https://www.google.com/maps/dir/?api=1&travelmode=driving'+(o?'&origin='+encodeURIComponent(o):'')+(d?'&destination='+encodeURIComponent(d):'');
     $('vMap').href=u;
     $('vSend').disabled=false;
   }
-  el.vWay.addEventListener('change',update);
   function view(s){$('vForm').hidden=s;$('vSum').hidden=!s;sheet.scrollTop=0}
-  function open(name,rate){lastFocus=document.activeElement;veh=name;RATE=rate||12;CAPACITY=({'Dzire':4,'Cruiser':15,'Scorpio':9,'Ertiga':7})[name]||60;el.vPax.max=CAPACITY;el.vPax.placeholder='कमाल '+CAPACITY+' प्रवासी';el.vPax.value='';el.vPhone.value='';el.vStart.value='';el.vEnd.value='';el.vFrom.value='';el.vTo.value='';el.vKm.value='';routeMessage='';$('vRate').textContent='₹'+RATE+' प्रति किलोमीटर';$('vTitle').textContent=name+' बुक करा';$('vErr').hidden=true;$('vBookingStatus').hidden=true;$('vBookingStatus').textContent='';$('vSend').disabled=false;$('vSend').textContent='बुकिंग विनंती पाठवा';$('vErr').style.color='var(--c1)';view(false);update();sheet.hidden=false;document.body.style.overflow='hidden';setTimeout(function(){el.vName.focus()},50)}
+  function open(name,rate){lastFocus=document.activeElement;veh=name;RATE=rate||12;CAPACITY=({'Dzire':4,'Cruiser':15,'Scorpio':9,'Ertiga':7})[name]||60;el.vPax.max=CAPACITY;el.vPax.placeholder='कमाल '+CAPACITY+' प्रवासी';el.vPax.value='';el.vPhone.value='';el.vStart.value='';el.vEnd.value='';$('vRate').textContent='₹'+RATE+' प्रति किलोमीटर';$('vTitle').textContent=name+' बुक करा';$('vErr').hidden=true;$('vBookingStatus').hidden=true;$('vBookingStatus').textContent='';$('vSend').disabled=false;$('vSend').textContent='बुकिंग विनंती पाठवा';$('vErr').style.color='var(--c1)';view(false);update();sheet.hidden=false;document.body.style.overflow='hidden';setTimeout(function(){el.vName.focus()},50)}
   function close(){sheet.hidden=true;document.body.style.overflow='';if(lastFocus&&lastFocus.focus)lastFocus.focus()}
   function summary(){
     var rows=[['गाडी',veh],['नाव',el.vName.value.trim()],['मोबाईल',el.vPhone.value.trim()]];
@@ -820,7 +775,7 @@ button,a,input,select{ -webkit-tap-highlight-color:transparent}
   var deferred=null,install=document.getElementById('installApp');
   window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e;install.hidden=false});
   install.addEventListener('click',function(){if(!deferred)return;deferred.prompt();deferred.userChoice.finally(function(){deferred=null;install.hidden=true})});
-  
+  if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){})})}
 })();
 </script>
 
