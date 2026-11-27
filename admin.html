@@ -1,4 +1,4 @@
-<!doctype html><html lang="mr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MATOSHREE Admin Panel</title>
+<!doctype html><html lang="mr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><title>MATOSHREE Admin Panel</title>
 <style>
 :root{--ink:#2b1718;--muted:#806b62;--gold:#c99b50;--paper:#fbf5eb;--white:#fffdf9;--line:#eadcc8}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,"Noto Sans Devanagari",sans-serif}header{background:#351b25;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}header strong{font-family:Georgia,serif;font-size:22px}header span{color:#e8c98e;font-size:13px}main{max-width:1180px;margin:28px auto;padding:0 16px}.card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 8px 28px #3c21100b}.login{max-width:430px;margin:7vh auto}.hidden{display:none!important}h1{font-size:24px;margin:0 0 8px}h2{font-size:18px;margin:0 0 14px}p.sub{color:var(--muted);margin:0 0 18px;font-size:14px}label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink);font:inherit}button{border:0;border-radius:10px;padding:11px 15px;background:var(--gold);color:#281715;font:inherit;font-weight:700;cursor:pointer}button.secondary{background:#f2e6d4;border:1px solid var(--line)}button.danger{background:#f6e1df;color:#8c252b}button.good{background:#dcefe2;color:#1d6840}button:disabled{opacity:.55;cursor:wait}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.stat{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:16px}.stat small{display:block;color:var(--muted)}.stat b{font-size:27px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}.tabs button{background:#efe3d2}.tabs button.active{background:#351b25;color:#fff}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-size:12px;white-space:nowrap}.status{display:inline-block;border-radius:99px;padding:4px 9px;font-size:12px;font-weight:700;background:#eee}.status.pending{background:#fff0cb;color:#805500}.status.confirmed{background:#dcefe2;color:#1d6840}.status.cancelled{background:#f6e1df;color:#8c252b}.actions{display:flex;gap:6px;flex-wrap:wrap}.actions button{padding:7px 9px;font-size:12px}.notice{padding:12px;border-radius:10px;background:#f5ead8;color:#59412d;margin:12px 0;font-size:14px}.notice.error{background:#f9e6e4;color:#8c252b}.notice.success{background:#e2f2e7;color:#1d6840}@media(max-width:700px){main{margin:16px auto}.stats{grid-template-columns:repeat(2,1fr)}header{padding:15px}.card{padding:15px}table{min-width:760px}}
 </style></head><body>
@@ -136,12 +136,15 @@ document.addEventListener('click',async e=>{
     await loadMarketplace();
   }
 });
-document.querySelectorAll('[data-market-tab]').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('[data-market-tab]').forEach(x=>x.classList.toggle('active',x===b));
-  ['owners','drivers','marketVehicles','requests'].forEach(t=>$(t+'Panel').classList.toggle('hidden',t!==b.dataset.marketTab));
-  if(b.dataset.marketTab==='requests')loadMarketplaceRequests();
-}));
-
+function setMainTab(tab){
+  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  ['bookings','vehicles','blocks','marketplace'].forEach(t=>$(t+'Tab').classList.toggle('hidden',t!==tab));
+}
+function setMarketplaceTab(tab,refresh=true){
+  document.querySelectorAll('[data-market-tab]').forEach(b=>b.classList.toggle('active',b.dataset.marketTab===tab));
+  ['owners','drivers','marketVehicles','requests'].forEach(t=>$(t+'Panel').classList.toggle('hidden',t!==tab));
+  if(refresh && tab==='requests') loadMarketplaceRequests();
+}
 async function authorizeAdmin(u){
   const {data,error}=await db.from('admin_users').select('user_id').eq('user_id',u.id).maybeSingle();
   if(error){await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('logoutBtn').classList.add('hidden');$('userEmail').textContent='';msg('loginMsg','Admin अधिकार तपासता आले नाहीत: '+error.message+' — Supabase RLS/permissions तपासा.','error');return false}
@@ -151,7 +154,26 @@ async function authorizeAdmin(u){
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();clear('loginMsg');$('loginBtn').disabled=true;const {data,error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});$('loginBtn').disabled=false;if(error){msg('loginMsg','Login अयशस्वी: '+error.message,'error');return}await authorizeAdmin(data.user)});
 $('forgotPasswordBtn').addEventListener('click',async()=>{clear('resetMsg');const email=$('email').value.trim();if(!email){msg('resetMsg','कृपया आधी Admin Email भरा.','error');$('email').focus();return}const btn=$('forgotPasswordBtn');btn.disabled=true;btn.textContent='Email पाठवत आहे...';const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:'https://ashokraykar.github.io/MATOSHREE/reset-password.html'});btn.disabled=false;btn.textContent='Forgot Password? / Password विसरलात?';if(error){msg('resetMsg','Reset Email पाठवता आला नाही: '+error.message,'error');return}msg('resetMsg','जर हा Email नोंदणीकृत असेल तर Password Reset Email पाठवला आहे. Gmail मधील नवीनतम Email उघडा. जुन्या Reset लिंक वापरू नका.','success')});
 $('logoutBtn').addEventListener('click',async()=>{await db.auth.signOut();$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('logoutBtn').classList.add('hidden');$('userEmail').textContent=''});$('refreshBtn').addEventListener('click',load);$('statusFilter').addEventListener('change',renderB);
-document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));['bookings','vehicles','blocks','marketplace'].forEach(t=>$(t+'Tab').classList.toggle('hidden',t!==b.dataset.tab))}));
+document.addEventListener('click',async e=>{
+  const mainTab=e.target.closest('[data-tab]');
+  if(mainTab){
+    const tab=mainTab.dataset.tab;
+    setMainTab(tab);
+    if(tab==='marketplace'){
+      // Marketplace opens directly on Booking Requests, the main admin task.
+      setMarketplaceTab('requests',false);
+      await loadMarketplace();
+    }
+    return;
+  }
+  const marketTab=e.target.closest('[data-market-tab]');
+  if(marketTab){
+    const tab=marketTab.dataset.marketTab;
+    setMarketplaceTab(tab,false);
+    if(tab==='requests') await loadMarketplaceRequests();
+    else await loadMarketplace();
+  }
+});
 $('blockForm').addEventListener('submit',async e=>{e.preventDefault();const s=new Date($('blockStart').value),n=new Date($('blockEnd').value);if(!(n>s)){msg('appMsg','समाप्तीची वेळ सुरुवातीपेक्षा पुढे असावी.','error');return}const {error}=await db.from('vehicle_blocks').insert({vehicle_id:$('blockVehicle').value,start_at:s.toISOString(),end_at:n.toISOString(),reason:$('blockReason').value.trim()});if(error){msg('appMsg','Vehicle block सेव्ह झाला नाही: '+error.message,'error');return}$('blockForm').reset();msg('appMsg','Vehicle block सेव्ह झाला.','success');await load()});
 db.auth.getSession().then(({data})=>{if(data.session)authorizeAdmin(data.session.user)});
 })();
